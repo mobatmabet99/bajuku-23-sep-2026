@@ -11,6 +11,86 @@ const observer = new IntersectionObserver(
 
 document.querySelectorAll('.reveal').forEach((element) => observer.observe(element));
 
+const heroCarousel = document.querySelector('[data-hero-carousel]');
+if (heroCarousel) {
+  const heroSlides = [...heroCarousel.querySelectorAll('[data-hero-slide]')];
+  const heroDots = [...heroCarousel.querySelectorAll('[data-hero-dot]')];
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let activeHeroSlide = 0;
+  let heroTimer;
+  let carouselPaused = false;
+  let heroAutoStopped = false;
+
+  function showHeroSlide(index) {
+    activeHeroSlide = (index + heroSlides.length) % heroSlides.length;
+    heroSlides.forEach((slide, slideIndex) => {
+      const isActive = slideIndex === activeHeroSlide;
+      slide.classList.toggle('is-active', isActive);
+      slide.setAttribute('aria-hidden', String(!isActive));
+      slide.inert = !isActive;
+      slide.tabIndex = isActive ? 0 : -1;
+    });
+    heroDots.forEach((dot, dotIndex) => {
+      const isActive = dotIndex === activeHeroSlide;
+      dot.classList.toggle('is-active', isActive);
+      if (isActive) dot.setAttribute('aria-current', 'true');
+      else dot.removeAttribute('aria-current');
+    });
+  }
+
+  function stopHeroTimer() {
+    window.clearInterval(heroTimer);
+  }
+
+  function startHeroTimer() {
+    stopHeroTimer();
+    if (heroAutoStopped || carouselPaused || reducedMotion.matches || document.hidden) return;
+    heroTimer = window.setInterval(() => showHeroSlide(activeHeroSlide + 1), 3000);
+  }
+
+  function stopHeroAuto() {
+    heroAutoStopped = true;
+    stopHeroTimer();
+  }
+
+  heroCarousel.querySelector('[data-hero-prev]')?.addEventListener('click', () => {
+    stopHeroAuto();
+    showHeroSlide(activeHeroSlide - 1);
+  });
+  heroCarousel.querySelector('[data-hero-next]')?.addEventListener('click', () => {
+    stopHeroAuto();
+    showHeroSlide(activeHeroSlide + 1);
+  });
+  heroDots.forEach((dot, index) => {
+    dot.addEventListener('click', () => {
+      stopHeroAuto();
+      showHeroSlide(index);
+    });
+  });
+  heroCarousel.addEventListener('mouseenter', () => {
+    carouselPaused = true;
+    stopHeroTimer();
+  });
+  heroCarousel.addEventListener('mouseleave', () => {
+    carouselPaused = false;
+    startHeroTimer();
+  });
+  heroCarousel.addEventListener('focusin', () => {
+    carouselPaused = true;
+    stopHeroTimer();
+  });
+  heroCarousel.addEventListener('focusout', (event) => {
+    if (!heroCarousel.contains(event.relatedTarget)) {
+      carouselPaused = false;
+      startHeroTimer();
+    }
+  });
+  document.addEventListener('visibilitychange', startHeroTimer);
+  reducedMotion.addEventListener('change', startHeroTimer);
+  showHeroSlide(0);
+  startHeroTimer();
+}
+
 const yearElement = document.getElementById('year');
 if (yearElement) yearElement.textContent = '2026';
 
